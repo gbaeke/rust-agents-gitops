@@ -57,10 +57,14 @@ Then Argo installs the rest from git, in order. Allow about a minute and a half:
 1. Sealed Secrets and the CRDs;
 2. the agentgateway controller;
 3. the central gateway;
-4. the app.
+4. the agents.
 
 - **Agents:** rust-agents at http://localhost:31000, research-agent at http://localhost:31001
 - **Argo CD:** http://localhost:31009 (user `admin`, password from `bootstrap/bootstrap.sh password`)
+
+![The Argo CD UI: the Applications page, with all 8 Applications Healthy and Synced](docs/images/argocd-applications.png)
+
+*Argo CD after a bootstrap. The filters on the left count all 8 Applications as Healthy and Synced; the tiles show four of the platform's.*
 
 From another machine, use the Docker host's name or IP instead of `localhost`. On Linux with ufw, the host ports also need the ufw-docker rule `sudo ufw route allow proto tcp from any to any port 30000:30009` (it matches the container port).
 
