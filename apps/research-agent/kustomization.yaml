@@ -1,0 +1,31 @@
+# The second agent: bases/rust-agent in namespace research-agent, on the
+# cheaper Haiku model and NodePort 30001 (http://<host>:31001).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: research-agent
+resources:
+  - ../../bases/rust-agent
+  - sealed-postgres.yaml
+  - sealed-gateway-key.yaml
+configMapGenerator:
+  - name: agent-config
+    behavior: merge
+    literals:
+      - AGENT_MODEL=claude-haiku-5-5
+      - MCP_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080/research-agent/mcp
+patches:
+  # Written by scripts, so their wave is patched in: secrets come first.
+  - target: {kind: SealedSecret}
+    patch: |-
+      - { op: add, path: /metadata/annotations, value: { argocd.argoproj.io/sync-wave: "-1" } }
+  # The MCP server's allowed host names (DNS-rebinding protection), with this
+  # namespace in them. env/1 is MCP_ALLOWED_HOSTS in bases/rust-agent/mcp-server.yaml.
+  - target: {kind: Deployment, name: mcp-server}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: mcp-server,mcp-server:8081,mcp-server.research-agent,mcp-server.research-agent:8081,mcp-server.research-agent.svc.cluster.local,mcp-server.research-agent.svc.cluster.local:8081
+  # rust-agents has NodePort 30000.
+  - target: {kind: Service, name: agent}
+    patch: |-
+      - { op: replace, path: /spec/ports/0/nodePort, value: 30001 }

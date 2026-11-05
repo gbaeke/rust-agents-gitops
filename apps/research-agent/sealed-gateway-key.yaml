@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: gateway-key
+  namespace: research-agent
+spec:
+  encryptedData:
+    key: AgA6G4MboLeDBiaGdJhUyxYhtP8yYzMbmKHkuw/lu/iiFy9D7evZ0YSJwwnb8la9w6+O2s4SugTIX4Xl0Fa1exgb8o0Asx3CWW1LzEpeJWg/WVN1uMMsS+RMdfvCfn8IX/8mMRiUCrdOCJPye7aETaiXAOYvrgBM2STMKiEixYGutqg31cLVjfLe9KaA1Z3YLXbusGxqmyZBgAuJjk0hIbnOd6mOXpSckp023muoWtL4LVXfMKTogBos9aecRfj4V3Kp0YYxh/HyIMYJpEQzrWNr6TdyH2nbla8V8qKlkJsYciVL9lNwauSmmgX/W68qIZV3Pzn2EgIMla+tlGLmrUHKFmljNgmAgk1a6kmuJ5gluJuSvK4nlu7/bMlbDyHu1IkEtB0ZX5efVMh6pXUS7mwAdD/r5JywF6AmqQ/+firK9W+1Jd27Tj1RMM62W2fl4BAOR0VoIWmIXnSAkbZBmdw5f4TM80URx/LFLIMroCju5b6BRHwkaqU9ZEVVLZMJM68P4y3fWPclKUXJB6BKn486v1ICv4MkneohIJqgUAQVnqPCMdMVrEhZ/dYV50KiS/Qc4R9w3x30zK2AXlLtzkYqcabM9QblidQpOLFFT+OJlJdK68rqp5TXl5DEsJMXfYqHmjfgnVNHVMgQcpUrLg+yu9dGYDbrt+G3eriOgaJZZfiBBsWIGiHE0a8ltl7Lln4d9h2tloq57mFKxz9rc5ueIJ9nlMD9k7CRS3rmGlyU3ufcabGsYU9qAZvLtqBX6j74qY3kSKnzThcFW2vGOLCK
+  template:
+    metadata:
+      name: gateway-key
+      namespace: research-agent
