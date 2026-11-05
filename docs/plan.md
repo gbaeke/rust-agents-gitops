@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 4 done, at checkpoint 4** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **all five phases done** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -412,6 +412,34 @@ Adding the two folders and pushing are the only steps.
 - adding a ClusterRole there fails the same way.
 
 **Checkpoint 5:** two agents, each from its folder, each limited to its namespace and sharing one gateway with its own key and limits. Removing a folder removes its app; its file in `platform/ai-gateway/apps/` has to go with it.
+
+Done 2026-11-05. How it was built:
+- **5.3 base first:** `apps/rust-agents/` became an overlay of `bases/rust-agent/`. Its output stayed byte-for-byte the same, so nothing in the cluster changed.
+  - The MCP server's `MCP_ALLOWED_HOSTS` contains the namespace, so each overlay replaces it with a JSON patch on `env/1`. A strategic-merge patch moved the entry to the front, which would have restarted the pods.
+  - The image tags moved to the base, so `release.sh` updates every agent at once.
+- **5.1 ApplicationSet before the second agent** (order swapped from the plan), in three pushes, so the switch couldn't delete the running app:
+  1. drop the resources-finalizer from the hand-made Application;
+  2. add the ApplicationSet and delete the old Application. Root pruned it without touching the app, and the ApplicationSet made a new `rust-agents` (new uid) that took over the same pods;
+  3. put the finalizer back, in the ApplicationSet's template.
+
+  No pod restarted at any step.
+- **5.2 AppProject `apps`:** it already existed from phase 3. The `!` exclusions in destinations work in v3.6.
+- **research-agent:** an overlay with Haiku, NodePort 30001, its own key, Postgres and MCP route. Argo picked up the folder by itself.
+  - Its agent started before `ai-gateway` had polled the new commit, and got 404 on its MCP route.
+  - The background MCP retry (phase 4) recovered within 16 s of the route appearing, with no restart.
+
+Checkpoint 5 results:
+
+| Test | Result |
+|---|---|
+| Models per agent (`policies.authorization` on each AgentgatewayModel; policy objects can't target a model) | research-agent → Sonnet: **403** "Model authorization denied"; Haiku: 200. rust-agents keeps both. |
+| Limits per agent (`limits.yaml`: research-agent 30 requests/min, `key: apiKey.app`) | Model calls over the limit: **429**, and only for research-agent; it refills within about a minute. **Tool calls are counted but never refused:** 120 MCP requests got 200 with `x-ratelimit-remaining: 0`, then the next model call got 429. That's an agentgateway v1.7.0 gap; a bug report is drafted, not posted. The limits are also per replica (2 × 30). |
+| No borrowing tools | Either app's key on the other's MCP route: **403**; on its own: 200 |
+| An app can't change the platform | An AgentgatewayModel and a ClusterRole in `apps/research-agent/`: sync refused, *"… is not permitted in project apps"*. Nothing reached the cluster, and the running app stayed on its last good version. |
+| Removing a folder | Removing `apps/research-agent/` and `platform/ai-gateway/apps/research-agent/` removed the app, its namespace and its PVC. rust-agents was untouched. **It took about 4.5 minutes:** the controller kept failing to render the deleted path for about 4 minutes before it began deleting, which then took about 20 s. |
+| Bringing it back | `git revert` of the removal: Synced and Healthy in 21 s, tools connected, chat works. Its secrets came back from git. |
+
+Usage at the end of the day: rust-agents (Sonnet) and research-agent (Haiku) show up as separate rows in the request log.
 
 ---
 
