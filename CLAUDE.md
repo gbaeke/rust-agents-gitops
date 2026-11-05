@@ -8,6 +8,14 @@ Rules:
 - Confirm before creating the GitHub repo and before every push.
 - Tools come from mise. Don't commit someone else's `mise.toml`.
 
+## Docs as artifacts (private, on claude.ai)
+
+- Field manual, what this repo does: https://claude.ai/artifact/XPiy8SaGVL9LR87J6L9qzo
+- GitOps and Argo CD primer, the ideas and terms behind it: https://claude.ai/artifact/G6r6caVwudkc3m9SPzCGK8
+- The script version's manual, "rust-agents on Kubernetes": https://claude.ai/artifact/XeTBXNkQxhJUhs2bNLGM3o
+
+Update them in place, keeping the URL, when the repo changes.
+
 ## agentgateway admin UI (Kubernetes mode)
 
 In Kubernetes mode the admin UI's menu only shows Models and Client Setup under LLM (the UI hard-codes this for its read-only `dumpMode`). Two more pages work but are not linked, so open them directly:
