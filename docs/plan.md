@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 1 done, at checkpoint 1** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 2 built; the rebuild test of checkpoint 2 is still to do** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -226,6 +226,21 @@ Then test the gateway with a temporary key from `agent-key.sh test` and curl fro
 - a pod in an unlabelled namespace can't connect at all.
 
 Remove the `test` key afterwards.
+
+Results, 2026-11-05 (the `test` key was then removed):
+
+| Test | Result |
+|---|---|
+| Haiku with the test key | 200 |
+| `claude-opus-5-5` (not declared) | 404 `model_not_found` |
+| No key | 401 "no API Key found" |
+| Wrong key | 401 "invalid credentials" |
+| Unlabelled namespace | connection times out |
+
+Other findings:
+- **Keys:** the hash in the ConfigMap is a plain `sha256` of the key, hex, as `agent-key.sh` makes it.
+- **Request logs:** they land in `request_logs`, with model, tokens and cost. Refused calls are logged with the reason. But `agentgateway_user` and `agentgateway_group` stay empty: the log doesn't record which app's key made the call. **Open (phase 3):** find how to fill these from `apiKey.app`, perhaps through the key metadata's field names or a policy that sets them, so usage splits per agent.
+- **Resource health in Argo:** per-resource health shows "-" in the Application's status. Argo 3 no longer stores it there by default. The UI and the overall health are fine.
 
 **Checkpoint 2:** all five Applications are Synced and Healthy, `kubectl get gatewayclass agentgateway` is Accepted, and the Gateway `ai-gateway` is Programmed. Then test the order: run `cluster.sh down`, `up` and `bootstrap.sh`, and check that the platform comes back with no manual step and the same sealing key (compare `kubeseal --fetch-cert` before and after).
 
