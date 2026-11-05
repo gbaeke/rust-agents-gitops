@@ -1,9 +1,9 @@
 # The rust-agents app, after the platform (wave 1). Phase 5 replaces this
 # with an ApplicationSet over apps/*, keeping the same name.
 #
-# With the resources-finalizer, deleting this Application deletes what it
-# deployed. The Postgres PVC is not among those (it comes from
-# volumeClaimTemplates), so chats survive until the namespace goes.
+# No resources-finalizer for now, so that the switch to the ApplicationSet
+# deletes only this Application and leaves what it deployed running for the
+# new one to take over. The ApplicationSet's template brings it back.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,8 +11,6 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
 spec:
   project: apps
   source:
