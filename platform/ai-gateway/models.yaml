@@ -2,7 +2,8 @@
 # its standard paths, including Anthropic's own /v1/messages in Anthropic's
 # format. A request for any other model is refused. The Anthropic key comes
 # from the Secret anthropic (scripts/seal.sh anthropic) and replaces the
-# client's key. Which agent may use which model is a policy on top of this.
+# client's key. Each model lists the apps that may use it (apiKey.app,
+# from apps/<app>/key.yaml); any other app gets 403 for that model.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayModel
 metadata:
@@ -17,6 +18,11 @@ spec:
     auth:
       secretRef:
         name: anthropic
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - apiKey.app in ["rust-agents"]
 ---
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayModel
@@ -32,3 +38,8 @@ spec:
     auth:
       secretRef:
         name: anthropic
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - apiKey.app in ["rust-agents", "research-agent"]
