@@ -11,11 +11,12 @@ mod kb;
 mod store;
 mod tools;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
@@ -33,6 +34,7 @@ use rig::DynModel;
 use rmcp::ServiceExt;
 use rmcp::model::{ClientCapabilities, ClientConfig, Implementation, ProtocolVersion};
 use rmcp::transport::StreamableHttpClientTransport;
+use rmcp::transport::streamable_http_client::StreamableHttpClientTransportConfig;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::signal::unix::{Signal, SignalKind, signal};
@@ -93,7 +95,7 @@ impl AppState {
     }
 }
 
-async fn connect_mcp(url: &str) -> anyhow::Result<Vec<DynamicTool>> {
+async fn connect_mcp(url: &str, api_key: Option<&str>) -> anyhow::Result<Vec<DynamicTool>> {
     // The newest protocol version without `initialize`: rmcp offers 2026-07-28
     // by default, which agentgateway refuses on an `initialize` request.
     let config = ClientConfig::new(
@@ -101,7 +103,15 @@ async fn connect_mcp(url: &str) -> anyhow::Result<Vec<DynamicTool>> {
         Implementation::new("rust-agents", env!("CARGO_PKG_VERSION")),
     )
     .with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE);
-    let transport = StreamableHttpClientTransport::from_uri(url);
+    let mut transport_config = StreamableHttpClientTransportConfig::with_uri(url);
+    // Behind the central AI gateway, tool calls need the app's key just like
+    // model calls, in the header rig's Anthropic client uses.
+    if let Some(key) = api_key {
+        let mut value = HeaderValue::from_str(key)?;
+        value.set_sensitive(true);
+        transport_config = transport_config.custom_headers(HashMap::from([(HeaderName::from_static("x-api-key"), value)]));
+    }
+    let transport = StreamableHttpClientTransport::from_config(transport_config);
     // The tools hold the connection open for as long as they live.
     let connection = McpConnection::new(config.serve(transport).await?);
     connection
@@ -342,6 +352,7 @@ async fn start() -> anyhow::Result<AppState> {
     let model_name = env("AGENT_MODEL", anthropic::completion::CLAUDE_SONNET_5_5);
     let kb_dir = PathBuf::from(env("KB_DIR", concat!(env!("CARGO_MANIFEST_DIR"), "/../knowledge-base")));
     let mcp_url = env("MCP_URL", "http://127.0.0.1:8081/mcp");
+    let mcp_api_key = std::env::var("MCP_API_KEY").ok().filter(|key| !key.is_empty());
 
     let model = AnthropicConfig::from_env()?.client().completion(model_name.as_str()).erase();
 
@@ -352,7 +363,7 @@ async fn start() -> anyhow::Result<AppState> {
     let mut mcp_tools = Vec::new();
     // Each attempt is capped: a connect to a pod that is going away can otherwise hang for 30s.
     for attempt in 1..=10 {
-        let connect = tokio::time::timeout(std::time::Duration::from_secs(2), connect_mcp(&mcp_url));
+        let connect = tokio::time::timeout(std::time::Duration::from_secs(2), connect_mcp(&mcp_url, mcp_api_key.as_deref()));
         match connect.await.unwrap_or_else(|_| Err(anyhow::anyhow!("timed out"))) {
             Ok(tools) => {
                 tracing::info!("connected to MCP server at {mcp_url} with {} tools", tools.len());
