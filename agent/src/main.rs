@@ -13,7 +13,8 @@ mod tools;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 use axum::extract::State;
 use axum::http::{HeaderName, HeaderValue, StatusCode};
@@ -65,14 +66,20 @@ struct AppState {
     model: DynModel<Completion>,
     model_name: String,
     kb: Arc<KnowledgeBase>,
-    mcp_tools: Vec<DynamicTool>,
+    /// Empty until the background connect in `start` succeeds.
+    mcp_tools: Arc<RwLock<Vec<DynamicTool>>>,
     store: Store,
 }
 
 impl AppState {
+    fn mcp_tools(&self) -> Vec<DynamicTool> {
+        self.mcp_tools.read().unwrap_or_else(|poisoned| poisoned.into_inner()).clone()
+    }
+
     /// The main agent for one run, its tools bound to the session's workspace.
     fn agent(&self, workspace: &SharedWorkspace, events: EventSender) -> Agent {
         let ws = || workspace.clone();
+        let mcp_tools = self.mcp_tools();
         AgentBuilder::new(self.model.clone())
             .preamble(SYSTEM_PROMPT)
             .max_tokens(8192)
@@ -87,10 +94,10 @@ impl AppState {
             .tool(Task {
                 model: self.model.clone(),
                 kb: self.kb.clone(),
-                mcp_tools: self.mcp_tools.clone(),
+                mcp_tools: mcp_tools.clone(),
                 events,
             })
-            .dynamic_tools(self.mcp_tools.clone())
+            .dynamic_tools(mcp_tools)
             .build()
     }
 }
@@ -255,7 +262,7 @@ async fn ready(State(state): State<Arc<AppState>>) -> StatusCode {
 }
 
 async fn info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let mcp_tools: Vec<String> = state.mcp_tools.iter().map(|tool| tool.name().to_string()).collect();
+    let mcp_tools: Vec<String> = state.mcp_tools().iter().map(|tool| tool.name().to_string()).collect();
     let documents: Vec<_> = state
         .kb
         .documents
@@ -346,6 +353,29 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Connects to the MCP server and publishes its tools, retrying until that
+/// works: every 0.5s while both start up, then backing off to every 30s.
+async fn connect_mcp_until_up(url: String, api_key: Option<String>, tools: Arc<RwLock<Vec<DynamicTool>>>) {
+    let mut delay = Duration::from_millis(500);
+    for attempt in 1u32.. {
+        // Each attempt is capped: a connect to a pod that is going away can otherwise hang for 30s.
+        let connect = tokio::time::timeout(Duration::from_secs(2), connect_mcp(&url, api_key.as_deref()));
+        match connect.await.unwrap_or_else(|_| Err(anyhow::anyhow!("timed out"))) {
+            Ok(found) => {
+                tracing::info!("connected to MCP server at {url} with {} tools", found.len());
+                *tools.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = found;
+                return;
+            }
+            Err(error) if attempt >= 10 => {
+                tracing::warn!("no MCP tools yet: could not connect to {url}: {error}; retrying in {delay:?}");
+                delay = (delay * 2).min(Duration::from_secs(30));
+            }
+            Err(_) => {}
+        }
+        tokio::time::sleep(delay).await;
+    }
+}
+
 /// The model, knowledge base, MCP tools and session store.
 async fn start() -> anyhow::Result<AppState> {
     let env = |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
@@ -359,21 +389,11 @@ async fn start() -> anyhow::Result<AppState> {
     let kb = KnowledgeBase::load(&kb_dir)?;
     tracing::info!("loaded {} documents from {}", kb.documents.len(), kb_dir.display());
 
-    // Retry for a few seconds: in containers both servers start at the same time.
-    let mut mcp_tools = Vec::new();
-    // Each attempt is capped: a connect to a pod that is going away can otherwise hang for 30s.
-    for attempt in 1..=10 {
-        let connect = tokio::time::timeout(std::time::Duration::from_secs(2), connect_mcp(&mcp_url, mcp_api_key.as_deref()));
-        match connect.await.unwrap_or_else(|_| Err(anyhow::anyhow!("timed out"))) {
-            Ok(tools) => {
-                tracing::info!("connected to MCP server at {mcp_url} with {} tools", tools.len());
-                mcp_tools = tools;
-                break;
-            }
-            Err(error) if attempt == 10 => tracing::warn!("no MCP tools: could not connect to {mcp_url}: {error}"),
-            Err(_) => tokio::time::sleep(std::time::Duration::from_millis(500)).await,
-        }
-    }
+    // In the background, and until it works: the MCP server, or its route on
+    // the gateway, may come up after this pod. Until then turns run without
+    // MCP tools.
+    let mcp_tools = Arc::new(RwLock::new(Vec::new()));
+    tokio::spawn(connect_mcp_until_up(mcp_url, mcp_api_key, mcp_tools.clone()));
 
     let store = Store::open(std::env::var("DATABASE_URL").ok().filter(|url| !url.is_empty())).await?;
     tracing::info!("sessions are kept in {}", store.kind());
