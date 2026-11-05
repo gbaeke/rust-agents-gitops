@@ -21,6 +21,11 @@ spec:
   template:
     metadata:
       name: "{{ .path.basename }}"
+      # Removing a folder deletes its Application, and with this, everything
+      # the Application deployed. The Postgres PVC comes from
+      # volumeClaimTemplates, so it stays until the namespace goes.
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
     spec:
       project: apps
       source:
