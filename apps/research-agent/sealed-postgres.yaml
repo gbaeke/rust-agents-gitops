@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: postgres
+  namespace: research-agent
+spec:
+  encryptedData:
+    password: AgB4/82FYQrlFZGcsXz4dui+rGm0QEQXuIsddxrxgb3+9qa+YhVMMfssAZLoscUkoLp3Eu3fpn62T++pJRFkOo9s1+E7JZNkXKYGjxnw+CP88tPyn2vlNVUV0KY+CZF+8dWhW2R8qVp5FtUaP5/EKQe1hBOmnQiPEqIHlYvtu1+UTgPVHVpx3jzavfQ5U32hg5JORikQcqoV2I+u3SgJP+K8I35xTDleQHyfYMHnO1wqBDSlJ1JPBcK/klr/tkcNG+wF53Ri5BvptikMEkzOtq/otG7J7xmlKd4u3tR2WQ1OCHoHDJNa0ogXTtLMhAlImlViD5mfrW6+LJEt1mAarsdp7e8LVvYRcjnRemnd3nlEVGSmdgzG2xwGsyGckfTBTS+eNCB6DH4kc2c8fA9gF4x8L8EDZ5DK0qrqBBj4OSp2xHdh1AH3cwWGjJxQtHHAq9FJ+m59zLUZVD947LnqWvJbtae/caR29PL3ZQyiQLk4uZ5pC4l04S0u3O14WrWzsxMcaA1QPjFjRzuCs0KHtDnCo30/iXyMeoNTr1i9U7kmtq4tJF6dZoZwKG2A658FxNmQPVItAYHcHfQWxNVJR9VpMaRkBxFIjwRTsA2IddsbKFPADz6Az/OR8YkBQORrGUrNBWI5Sr6ZCsvj+RRm7mHSCL69MP4w6mlftU59PUUeDD25sq+VozsdqwP31dm7pmEFY3GW0XjmjjN4L5kt+7DVoAF0guiiuNV0qn78xbalZbNBf3itnFvrq6yulakQMaY=
+  template:
+    metadata:
+      name: postgres
+      namespace: research-agent
