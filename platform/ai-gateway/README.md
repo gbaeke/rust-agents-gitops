@@ -10,5 +10,6 @@ The central AI gateway, synced by the Application `ai-gateway` (`argocd/platform
 | `gateway.yaml` | the Gateway `ai-gateway` and how its proxy runs |
 | `models.yaml` | the model catalogue: only these are served |
 | `api-keys.yaml` | callers must send a key whose hash is in an `apps/<app>/key.yaml` |
+| `usage-per-app.yaml` | logs the calling app (`apiKey.app`) as the request log's user |
 | `network-policies.yaml` | only client namespaces reach the proxy; only the proxy reaches Postgres |
-| `apps/<app>/` | per app: its key hash (`scripts/agent-key.sh <app>`) and, from phase 3, its MCP route |
+| `apps/<app>/` | per app: `key.yaml`, its key hash (`scripts/agent-key.sh <app>`), and `mcp.yaml`, its MCP backend, route on `/<app>/mcp` and the rule that only its own key may use it |

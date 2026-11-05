@@ -1,0 +1,17 @@
+# Records which app made each call: the app named in its key's metadata
+# (apps/<app>/key.yaml) goes into the request log's agentgateway_user column,
+# so the admin UI's analytics can split usage per agent.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: usage-per-app
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: ai-gateway }
+  frontend:
+    accessLog:
+      attributes:
+        add:
+          - { name: agentgateway.user, expression: apiKey.app }

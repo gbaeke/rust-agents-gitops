@@ -1,0 +1,12 @@
+# rust-agents's gateway key, as a hash only (written by scripts/agent-key.sh; the key
+# itself is sealed in apps/rust-agents/). Picked up by the policy in api-keys.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-key-rust-agents
+  labels:
+    ai-gateway.platform/api-key: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+data:
+  rust-agents: '{"keyHash": "sha256:3528316a591d52d8e9ad9a8fa6745e049b3773664b971ec65020dea7b4ad6ce6", "metadata": {"app": "rust-agents"}}'

@@ -28,3 +28,31 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
+---
+# apps: one per folder under apps/. Apps use the platform, they don't change
+# it: the only cluster-wide kind is their Namespace, they can't deploy into
+# the platform's namespaces, and they can't create any Gateway API or
+# agentgateway object (the central gateway owns models, routes and policies;
+# D10).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Agent apps; their own namespace only, no gateway objects
+  sourceRepos:
+    - https://github.com/gbaeke/rust-agents-gitops.git
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: "!kube-system" }
+    - { server: https://kubernetes.default.svc, namespace: "!argocd" }
+    - { server: https://kubernetes.default.svc, namespace: "!agentgateway-system" }
+    - { server: https://kubernetes.default.svc, namespace: "!ai-gateway" }
+    - { server: https://kubernetes.default.svc, namespace: "*" }
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  namespaceResourceBlacklist:
+    - { group: gateway.networking.k8s.io, kind: "*" }
+    - { group: agentgateway.dev, kind: "*" }

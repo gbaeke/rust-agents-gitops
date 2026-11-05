@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rust-agents
+resources:
+  - namespace.yaml
+  - sealed-postgres.yaml
+  - sealed-gateway-key.yaml
+  - postgres.yaml
+  - mcp-server.yaml
+  - agent.yaml
+  - disruption-budgets.yaml
+  - network-policies.yaml
+configMapGenerator:
+  - name: agent-config
+    options:
+      annotations:
+        argocd.argoproj.io/sync-wave: "-1"
+    literals:
+      # Must be a model the central gateway serves (platform/ai-gateway/models.yaml).
+      - AGENT_MODEL=claude-sonnet-5-5
+      - AGENT_ADDR=0.0.0.0:3000
+      # Model and tool traffic both go through the central AI gateway, with
+      # this app's key (Secret gateway-key, see agent.yaml).
+      - ANTHROPIC_BASE_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080
+      - MCP_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080/rust-agents/mcp
+      - KB_DIR=/knowledge-base
+      - SESSION_TTL_DAYS=7
+# Set by scripts/release.sh: the short hash of the last commit that changed
+# the source (never reused, so a new tag always rolls out).
+images:
+  - name: localhost:5001/rust-agents/agent
+    newTag: unreleased
+  - name: localhost:5001/rust-agents/mcp-server
+    newTag: unreleased
+# Secrets and config come first in a sync (wave -1); the other files set their
+# own wave: Postgres 0, the rest 1. The sealed files are written by scripts,
+# so their wave is patched in here.
+patches:
+  - target: { kind: SealedSecret }
+    patch: |-
+      - { op: add, path: /metadata/annotations, value: { argocd.argoproj.io/sync-wave: "-1" } }

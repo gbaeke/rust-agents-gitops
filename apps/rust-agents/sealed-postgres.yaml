@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: postgres
+  namespace: rust-agents
+spec:
+  encryptedData:
+    password: AgBlgXWxQe/tL7HYXmfXkfielNFCXeLSB/Gb4zKM0oVF8u8jP+pj34xXZw8FP9ZN92+S4c19Z2jhhBtIdmcD/W3g1r42NbElCjiZtOQqtKrf1oEr7j0HXDW9bxZUoA9Hug+460sxoAucuMXO8oLZqRJfgJEcSJc3xhN4HcWUjkOmSwrANJo8j9016g6Sw08L1wrRI/7aWSingXwUrdfutXibAgbSPzvazngKR0xJV5PeXu40ChzDxi5IEYpnVg/L6e+xOz0eNcQEDgt+u7QPxrM2b8bqM+FjHZk0Wccf4uasHBuB04c/cfJb9UgDKIUQiYK0/72CyH2Irh/1Llth6OO9d2avh/I663hhA1XKZLyggzTIzcMXL71hQBbo8aZm/UDYeEHJcdLqXmKKfvB/krHWUNAmshHPXxkx4Lgh5R6SggxqKp1UtSIUterNLhYO3XJ5x2BmKjaOjzyvscztYb8SPFGpdCHjVx3+c64Ja4oHy+XBmZlPj6vF5B3EORJSR679jctCTRxwqlgpFzt59aroZP4dnP8o40BlBTbFTU/M+2d0zQ+Bua6IimdQts86MrRcmnhvAuuZPUnUy6/sFvUhMi3/SKVxCmTebhpkpApF4+cj7ncWCv5rP436s1Bo65ISL5ozWGHFGIitIoQMsCDPWV7Cx0HlrHuMpUpdX/O2bRIZANM+rnKKOTzgdltRiEje9tKtlEOSch62HCu+aDHM1IF5aF5WHRDmQVI4LlIeVeyO/zhDkaW4yz3JHvOCz/k=
+  template:
+    metadata:
+      name: postgres
+      namespace: rust-agents

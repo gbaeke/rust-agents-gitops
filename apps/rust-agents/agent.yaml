@@ -1,0 +1,81 @@
+# Stateless: history, plan and files are in Postgres, so any replica can
+# serve any message. A turn is one HTTP request and stays on one pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: agent }
+  template:
+    metadata:
+      labels: { app: agent }
+    spec:
+      automountServiceAccountToken: false
+      # A deep-agent turn can take minutes; SIGTERM lets it finish first.
+      terminationGracePeriodSeconds: 120
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: agent }
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: agent
+          image: localhost:5001/rust-agents/agent # tag set by scripts/release.sh
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: agent-config }
+          env:
+            # This app's key for the central AI gateway (scripts/agent-key.sh),
+            # on model calls (rig sends it as x-api-key) and on tool calls.
+            - name: ANTHROPIC_API_KEY
+              valueFrom: { secretKeyRef: { name: gateway-key, key: key } }
+            - name: MCP_API_KEY
+              valueFrom: { secretKeyRef: { name: gateway-key, key: key } }
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: postgres, key: password } }
+            - name: DATABASE_URL
+              value: postgres://agent:$(PGPASSWORD)@postgres:5432/agent
+          ports:
+            - { name: http, containerPort: 3000 }
+          # Liveness only starts once this passes; startup waits up to 60s for the MCP server.
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  type: NodePort
+  selector: { app: agent }
+  ports:
+    # The kind cluster publishes NodePort 30000 on host port 31000.
+    - { name: http, port: 3000, targetPort: http, nodePort: 30000 }

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rust-agents
+  labels:
+    # The cluster refuses pods that run as root, escalate privileges, etc.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    # May call the central AI gateway (its NetworkPolicy lets this namespace in).
+    ai-gateway.platform/client: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"

@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: gateway-key
+  namespace: rust-agents
+spec:
+  encryptedData:
+    key: AgCMdwelYPJXFt3G2EA93AdhB13yIY2rM6a+JF6MxU7fDcGpxo3mjdz0JXSlzxcuMMIhdCbUhz1m9e6WLVod6h6rRbUyb6FuQsfPJ/FeuQQolVQQrFvAJOw6ZoinsDQ3QLb5Thks45FiKxPMx4az/XnJaLol8tTsPJBwQ5p0PG3fvLuDLykqlCAlT9AFjcmeLV/2AbmNaRiyzz+hLGPi6bFovRzZLGPuwvqCIvIawL5+sEqril8kb3yuJRF2bgANPOSS7Q+BIxv8qQnMYsTo2I7OpTCsmBWrLgdD72Od/5OFDRUk2tM8OvdZBA/WZVNGUQS8RShX9uNwMf+BOym+vwdSa1SLmyLaG8jLXsSQAGpLihYQOsafw6vYRiGZTqecXbAxGuQquFN7Lz3HUbhR0qbqTODhDTrUjEvLoJRjE83whaN7qYT38pL/+i709xIwpRNvPhN1p2OumGYk6bD3hZPjXOF3Iy413lOqLCM5YniZCyMZiLBDC77v6lL4eoJaLzlxtnM4Pr+zw2xDfkMdwMPbAi8iFFxiUaDu8dQd5RIx8CGdOCGEt63VbMT9jDCm5q3bazczqbxqkzuLvpEKOXMQS7oOk3fwBa41WybInLqoo6xJXos0CQiidfl0qpOEjyNasBh3wm1449c26y8B33UN+uJRemmNsD9E8HxzdmkQwA/c8hBRNKpaFukTwlT1p19+Z801JNzratgtUCPFqVh9BfzcEd3Yz2JDoo8CRBAL/teWRMMNQ9i1iXW1CtzhKly1BZmJwi07wwJwMpwYWf/i
+  template:
+    metadata:
+      name: gateway-key
+      namespace: rust-agents
