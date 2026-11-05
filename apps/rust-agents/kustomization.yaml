@@ -29,9 +29,9 @@ configMapGenerator:
 # the source (never reused, so a new tag always rolls out).
 images:
   - name: localhost:5001/rust-agents/agent
-    newTag: 3ea8767
+    newTag: e0ef63a
   - name: localhost:5001/rust-agents/mcp-server
-    newTag: 3ea8767
+    newTag: e0ef63a
 # Secrets and config come first in a sync (wave -1); the other files set their
 # own wave: Postgres 0, the rest 1. The sealed files are written by scripts,
 # so their wave is patched in here.
