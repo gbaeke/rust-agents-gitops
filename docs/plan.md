@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 1 built, waiting on checkpoint 1** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 1 done, at checkpoint 1** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -123,6 +123,12 @@ rust-agents-gitops/
 - Registry: kind's guide now uses `registry:3`. On kind v0.33 the nodes read `/etc/containerd/certs.d` already, so the `containerdConfigPatches` entry was left out. Only `hosts.toml` per node is needed, and the busybox test passed.
 - Argo CD: chart 10.14.0, which is Argo CD v3.6.1. The `argocd` CLI from mise is 3.6.0, and `kubeseal` is 0.41.2.
 - Health checks: v3.6.1 has a built-in one for Gateway (waits for `Programmed=True`) and the other Gateway API kinds. It has none for Application or agentgateway, so `argocd-values.yaml` adds Lua for Application, AgentgatewayBackend (`status.conditions` Accepted) and AgentgatewayModel (route-style `status.parents[].conditions`). The two agentgateway checks are untested until there are such objects.
+- Checkpoint 1 results:
+  - the root is Synced and Healthy at `c8bcf1e`, with no children;
+  - the UI answers on `localhost:31009`;
+  - memory: Argo CD uses about 200 MiB (application-controller 99, repo-server 36, applicationset-controller 32, server 28, redis 7);
+  - the whole `gitops` cluster at idle takes about 1.8 GiB of node containers (control plane 1.14 GiB, workers 0.29 and 0.39 GiB), and the registry 20 MiB;
+  - there's no metrics-server, so these numbers come from `crictl stats` and `docker stats`.
 
 1.1 **Create the repo.** After confirming D1, run `gh repo create`, then:
 - copy the Rust source, as listed in the layout above, from this repo at its current `main`. Note the source commit in the first commit message. Leave out `compose.yaml`, `kind/`, `deploy/` and `target/`;
