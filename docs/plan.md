@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 2 built; the rebuild test of checkpoint 2 is still to do** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 2 done, at checkpoint 2** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -243,6 +243,14 @@ Other findings:
 - **Resource health in Argo:** per-resource health shows "-" in the Application's status. Argo 3 no longer stores it there by default. The UI and the overall health are fine.
 
 **Checkpoint 2:** all five Applications are Synced and Healthy, `kubectl get gatewayclass agentgateway` is Accepted, and the Gateway `ai-gateway` is Programmed. Then test the order: run `cluster.sh down`, `up` and `bootstrap.sh`, and check that the platform comes back with no manual step and the same sealing key (compare `kubeseal --fetch-cert` before and after).
+
+Rebuild test, 2026-11-05: **passed.**
+- **Timing:** `cluster.sh down`, then `up` (34 s) and `bootstrap.sh` (39 s). All six Applications were Synced and Healthy 60 s after the bootstrap, so the whole platform was back about 2.5 minutes after the start, with no manual step.
+- **Waves:** they came up in order, as on the first install.
+- **Sealing key:** the fingerprint is unchanged (`EB:9E:BF:01:…`), and there's still only one key. The restore ran before the controller existed, so no restart was needed.
+- **Secrets:** both SealedSecrets in `ai-gateway` decrypted from git.
+- **Gateway:** the GatewayClass is Accepted, the Gateway Programmed, and both models are Accepted with ResolvedRefs.
+- **Lost, as expected:** the request logs and the Argo admin password.
 
 ---
 
