@@ -24,7 +24,7 @@ configMapGenerator:
       - ANTHROPIC_BASE_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080
       - MCP_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080/rust-agents/mcp
       - KB_DIR=/knowledge-base
-      - SESSION_TTL_DAYS=7
+      - SESSION_TTL_DAYS=14
 # Set by scripts/release.sh: the short hash of the last commit that changed
 # the source (never reused, so a new tag always rolls out).
 images:
