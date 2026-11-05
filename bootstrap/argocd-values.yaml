@@ -1,0 +1,87 @@
+# Values for the argo/argo-cd Helm chart (version pinned in bootstrap.sh).
+# A lab setup: one replica of everything, no SSO, no notifications.
+
+configs:
+  params:
+    # Plain http: the UI is at http://<host>:31009 with no TLS. Fine on a lab
+    # machine, not elsewhere.
+    server.insecure: true
+  cm:
+    # Since Argo CD 1.8 an Application is Healthy as soon as it exists, so a
+    # parent (the root) doesn't wait for its children and sync waves on
+    # Applications order nothing. This makes a child Application report its
+    # own health, so wave n+1 waits until wave n is Healthy. From the Argo CD
+    # docs (operator-manual/health.md).
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil then
+        if obj.status.health ~= nil then
+          hs.status = obj.status.health.status
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+        end
+      end
+      return hs
+    # Argo CD has built-in checks for the Gateway API kinds (a Gateway waits
+    # for Programmed=True), but none for agentgateway's. A backend reports
+    # Accepted in status.conditions.
+    resource.customizations.health.agentgateway.dev_AgentgatewayBackend: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = "Waiting for the backend to be accepted"
+      if obj.status ~= nil and obj.status.conditions ~= nil then
+        for _, c in ipairs(obj.status.conditions) do
+          if c.type == "Accepted" then
+            if c.status == "True" then
+              hs.status = "Healthy"
+            elseif c.status == "False" then
+              hs.status = "Degraded"
+            end
+            hs.message = c.message or ""
+          end
+        end
+      end
+      return hs
+    # A model reports like a route: per parent Gateway, in status.parents.
+    # Healthy once every parent has accepted it with all references resolved.
+    resource.customizations.health.agentgateway.dev_AgentgatewayModel: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = "Waiting for a Gateway to accept the model"
+      if obj.status == nil or obj.status.parents == nil or #obj.status.parents == 0 then
+        return hs
+      end
+      for _, p in ipairs(obj.status.parents) do
+        local accepted = false
+        for _, c in ipairs(p.conditions or {}) do
+          if (c.type == "Accepted" or c.type == "ResolvedRefs") and c.status == "False" then
+            hs.status = "Degraded"
+            hs.message = c.message or c.reason or c.type
+            return hs
+          end
+          if c.type == "Accepted" and c.status == "True" then
+            accepted = true
+          end
+        end
+        if not accepted then
+          return hs
+        end
+      end
+      hs.status = "Healthy"
+      hs.message = ""
+      return hs
+
+server:
+  service:
+    type: NodePort
+    # Published on host port 31009 (see cluster/cluster.yaml).
+    nodePortHttp: 30009
+
+# Saves memory: no SSO and no notifications.
+dex:
+  enabled: false
+notifications:
+  enabled: false

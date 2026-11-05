@@ -1,0 +1,34 @@
+# The kind cluster for the GitOps version: same shape as rust-agents' dev
+# cluster (1 control plane, 2 workers), so both can run side by side.
+#
+# Apps use NodePorts 30000-30009, as on dev, but they are published on host
+# ports 31000-31009 so they don't clash with dev: a Service with nodePort
+# 30000 is at http://<host>:31000. The Argo CD UI is nodePort 30009, so
+# http://<host>:31009. ufw-docker matches the container port, so the rule
+# made for dev also covers these:
+#   sudo ufw route allow proto tcp from any to any port 30000:30009
+#
+# Images come from the local registry container kind-registry, pulled as
+# localhost:5001/...; cluster.sh writes the containerd hosts.toml that maps
+# that name to the registry. Node images from kind v0.27.0 on read
+# /etc/containerd/certs.d already, so no containerdConfigPatches is needed.
+#
+# Port mappings can only be set when the cluster is created; add more here
+# and recreate (cluster.sh down && cluster.sh up) if 10 is not enough.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - { containerPort: 30000, hostPort: 31000, listenAddress: "0.0.0.0" }
+      - { containerPort: 30001, hostPort: 31001, listenAddress: "0.0.0.0" }
+      - { containerPort: 30002, hostPort: 31002, listenAddress: "0.0.0.0" }
+      - { containerPort: 30003, hostPort: 31003, listenAddress: "0.0.0.0" }
+      - { containerPort: 30004, hostPort: 31004, listenAddress: "0.0.0.0" }
+      - { containerPort: 30005, hostPort: 31005, listenAddress: "0.0.0.0" }
+      - { containerPort: 30006, hostPort: 31006, listenAddress: "0.0.0.0" }
+      - { containerPort: 30007, hostPort: 31007, listenAddress: "0.0.0.0" }
+      - { containerPort: 30008, hostPort: 31008, listenAddress: "0.0.0.0" }
+      - { containerPort: 30009, hostPort: 31009, listenAddress: "0.0.0.0" }
+  - role: worker
+  - role: worker
