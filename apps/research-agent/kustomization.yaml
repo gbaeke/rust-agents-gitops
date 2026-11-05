@@ -7,7 +7,6 @@ resources:
   - ../../bases/rust-agent
   - sealed-postgres.yaml
   - sealed-gateway-key.yaml
-  - forbidden.yaml
 configMapGenerator:
   - name: agent-config
     behavior: merge
