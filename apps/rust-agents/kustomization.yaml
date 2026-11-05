@@ -29,13 +29,13 @@ configMapGenerator:
 # the source (never reused, so a new tag always rolls out).
 images:
   - name: localhost:5001/rust-agents/agent
-    newTag: unreleased
+    newTag: 3ea8767
   - name: localhost:5001/rust-agents/mcp-server
-    newTag: unreleased
+    newTag: 3ea8767
 # Secrets and config come first in a sync (wave -1); the other files set their
 # own wave: Postgres 0, the rest 1. The sealed files are written by scripts,
 # so their wave is patched in here.
 patches:
-  - target: { kind: SealedSecret }
+  - target: {kind: SealedSecret}
     patch: |-
       - { op: add, path: /metadata/annotations, value: { argocd.argoproj.io/sync-wave: "-1" } }
