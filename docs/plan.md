@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 2 done, at checkpoint 2** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 3 built and tested; the rebuild test of checkpoint 3 is still to do** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -308,6 +308,34 @@ Then `argocd app sync rust-agents` or a refresh, so we don't wait for the 3-minu
 - direct egress blocked;
 - the request log rows in the central gateway's analytics page, marked as rust-agents' calls;
 - the agent's pods can't reach `api.anthropic.com` directly, and a wrong gateway key gets refused.
+
+Built 2026-11-05, first release `3ea8767`. Changes from the plan:
+- **The agent sends its key on MCP calls too.** The `api-keys` policy covers the whole Gateway, so tool calls need a key as well. `agent/src/main.rs` reads an optional `MCP_API_KEY` and sends it as `x-api-key`, the header rig uses for model calls. Both variables come from the Secret `gateway-key`.
+- **Each app's MCP route has an authorization rule,** `apiKey.app == "<app>"` (in `apps/<app>/mcp.yaml`), so another app's valid key can't use its tools.
+- **Usage per app:** the request log's `agentgateway_user` column is filled from the log attribute `agentgateway.user` (found in agentgateway's `log_store.rs`). `usage-per-app.yaml` sets it to `apiKey.app`.
+- **No URL rewrite is needed:** `/rust-agents/mcp` reaches the MCP target's path `/mcp`.
+- **`.gitignore`:** the pattern `*-key.yaml` hid `sealed-gateway-key.yaml`, so `!sealed-*.yaml` was added. Sealed files are encrypted and belong in git.
+- **yq** reformats one flow-style line of `kustomization.yaml` on the first release. It's stable after that.
+
+**Found: the platform half of a commit can land after the app half.** The app and its MCP route were pushed in one commit. Only `root` was refreshed, so `ai-gateway` was still Healthy at the old commit. The root therefore went on to wave 1, and the agent started before its route existed. The agent tries MCP only 10 times in 5 s at startup, then runs without tools. The fix then was a refresh of `ai-gateway` and deleting the agent pods. Lasting fixes, still open:
+- the agent keeps retrying MCP in the background, which is the right fix;
+- or refresh every Application, not just `root`, after a push.
+
+A fresh bootstrap doesn't have the problem, because everything syncs at the same commit.
+
+Checkpoint 3 results (Sonnet; 6 calls, $0.038 in total):
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Message on pod A with an MCP tool | `calculate` was called through the gateway: 7006652 |
+| 2 | Same session on pod B | remembered the code word |
+| 3 | After deleting all agent pods, via NodePort 31000 | remembered |
+| 4 | Second message while busy | 409 "This chat is still working on a previous message." |
+| 5 | Reset | the history is gone |
+| 6 | Undeclared model, with rust-agents' key | 404 `model_not_found` |
+| 7–9 | Wrong key on a model call; wrong or no key on MCP | 401 |
+| 10–13 | From inside an agent pod: `api.anthropic.com`, the internet and the MCP server directly | time out; only the gateway answers (401 without a key) |
+| 14 | Request log | the successful calls and the 404 are `agentgateway_user = rust-agents`, with tokens and cost |
 
 Then run `cluster.sh down`, `up` and `bootstrap.sh`, and check that the whole app comes back from git with no other step. Postgres data is lost then, since the PVC goes with the cluster. That's expected.
 
