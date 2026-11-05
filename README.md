@@ -1,8 +1,8 @@
 # rust-agents-gitops
 
-The GitOps version of [rust-agents](https://github.com/gbaeke/rust-agents): the same Rust "deep agent", MCP server and Postgres, on a kind cluster, but [Argo CD](https://argo-cd.readthedocs.io/) applies everything from git instead of `deploy.sh`. One more change: agentgateway is a **central AI gateway** shared by every agent, not a proxy per app.
+A Rust "deep agent" on Claude, with an MCP tool server and Postgres, running on a local kind cluster and deployed the GitOps way: [Argo CD](https://argo-cd.readthedocs.io/) applies everything from this repo, and secrets are in git, encrypted with Sealed Secrets. Every model and tool call goes through [agentgateway](https://agentgateway.dev), set up as a **central AI gateway** that all agents share. It holds the Anthropic key, the allowed models, a key per agent, limits and each agent's tool route. Two agents run from one template.
 
-The source was copied from rust-agents at commit `5a40b5f`. Since then the two repos are independent. How it was built, phase by phase, is in [docs/plan.md](docs/plan.md).
+How it was built, phase by phase, is in [docs/plan.md](docs/plan.md).
 
 ```
                         git (this repo, main)
@@ -38,16 +38,24 @@ Then Argo installs the rest from git, in order. Allow about a minute and a half:
 3. the central gateway;
 4. the app.
 
-- **Agents:** rust-agents at http://omarchy:31000, research-agent at http://omarchy:31001
-- **Argo CD:** http://omarchy:31009 (user `admin`, password from `bootstrap/bootstrap.sh password`)
+- **Agents:** rust-agents at http://localhost:31000, research-agent at http://localhost:31001
+- **Argo CD:** http://localhost:31009 (user `admin`, password from `bootstrap/bootstrap.sh password`)
 
-From another machine, the host ports need the ufw-docker rule `sudo ufw route allow proto tcp from any to any port 30000:30009` (it matches the container port).
+From another machine, use the Docker host's name or IP instead of `localhost`. On Linux with ufw, the host ports also need the ufw-docker rule `sudo ufw route allow proto tcp from any to any port 30000:30009` (it matches the container port).
 
 **On a new cluster:** the images live in the registry container, which `cluster.sh down` leaves running. The Sealed Secrets key comes from the backup in `~/.config/rust-agents-gitops/`, which `bootstrap.sh` restores before Sealed Secrets starts. If that key is lost, every `sealed-*.yaml` must be sealed again (see [Secrets](#secrets)).
 
+### On macOS or Windows
+
+Built and tested on Linux. The scripts are plain bash (3.2 is enough), so on macOS they should run as they are, with Docker Desktop or OrbStack instead of Docker Engine. Untested there so far.
+- **URLs:** the same, on `localhost`. The ufw rule doesn't apply.
+- **Images:** on Apple Silicon, `release.sh` builds arm64 images, which match kind's arm64 nodes.
+- **Sealing key:** copy `~/.config/rust-agents-gitops/sealing-key.yaml` from the machine that made the cluster before you run `bootstrap.sh`. Without it, the new cluster can't decrypt the `sealed-*.yaml` files in git, and each one must be sealed again (see [Secrets](#secrets)).
+- **Windows:** run everything inside WSL2, with Docker Desktop's WSL integration or Docker Engine in the WSL distro.
+
 ## Using the agent
 
-Open http://omarchy:31000 and chat:
+Open http://localhost:31000 and chat:
 - **What it does:** plans with a todo list, keeps notes in a scratch filesystem, hands research to subagents, and searches the knowledge base in `knowledge-base/` (product catalogue, pricing and SLA, expense policy, an API reference, a postmortem). The **Plan** and **Files** tabs show its todo list and files.
 - **Tools** from the MCP server, through the gateway: `calculate`, `current_time`, `get_weather`, `fetch_url`.
 - **Chats** survive pod restarts: they're in the app's Postgres, and any of the 3 pods can answer. **Reset** clears one.
@@ -122,20 +130,9 @@ Secrets are in git, encrypted with Sealed Secrets; only the controller in this c
 
 `scripts/sealing-key.sh backup` saves the controller's key outside git (done once). `restore` brings it back, and `cert` prints the public certificate.
 
-## Compared with the script version
+## What's in git, and what isn't
 
-| | rust-agents (scripts) | rust-agents-gitops |
-|---|---|---|
-| Install | `kind/cluster.sh up`, `kind/agentgateway.sh install`, `deploy/deploy.sh` | `cluster.sh up`, `bootstrap.sh`; Argo does the rest, in waves |
-| Rebuild from nothing | Run the three scripts again; secrets come from `.env` again | `down`, `up`, `bootstrap.sh`: about 2.5 minutes, no other step; secrets come from git |
-| Release | `deploy.sh` rebuilds `:dev`, loads it into kind, restarts the pods | `release.sh` builds a tag that's never reused, commits it; the push deploys |
-| A setting | Edit, run `deploy.sh` | Edit, commit, push |
-| Rollback | Rebuild the old code by hand | `git revert`, push |
-| Manual change in the cluster | Stays until the next `deploy.sh` | Undone within seconds |
-| What git records | The manifests | The manifests, every released version, every setting, the encrypted secrets, the gateway's models, keys and policies |
-| Gateway | One proxy per app, holding the key | One central gateway: models, keys, policies and usage for all agents |
-| A second agent | Copy the manifests and the script steps | A folder with an overlay and a key; the ApplicationSet does the rest |
-| Quick experiments | Just `kubectl` | Pause `root` and the app first |
+Git holds the manifests, every released image tag, every setting, the encrypted secrets, and the gateway's models, keys and policies. So a lost cluster comes back with `cluster.sh down`, `cluster.sh up` and `bootstrap.sh` in about 2.5 minutes, with no other step. Only the chats in Postgres are lost.
 
 What still needs a script: the cluster (`cluster.sh`), installing Argo CD (`bootstrap.sh`), sealing secrets (`seal.sh`, `agent-key.sh`), the sealing key backup, and building images (`release.sh`). The last could move to CI, which would build and push to a registry such as ghcr.io and commit the tag.
 

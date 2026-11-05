@@ -91,13 +91,16 @@ start() {
   registry
   # The control plane first, so the workers find the API server when they come up.
   docker start "$CLUSTER-control-plane" >/dev/null
-  nodes | grep -vx "$CLUSTER-control-plane" | xargs -r docker start >/dev/null
+  # No xargs -r: macOS's xargs may not have it. Unquoted on purpose: one name per word.
+  workers="$(nodes | grep -vx "$CLUSTER-control-plane" || true)"
+  [ -z "$workers" ] || docker start $workers >/dev/null
   wait_ready
   connect_registry
 }
 
 stop() {
-  nodes | xargs -r docker stop >/dev/null
+  all="$(nodes)"
+  [ -z "$all" ] || docker stop $all >/dev/null
   echo "cluster $CLUSTER stopped"
 }
 

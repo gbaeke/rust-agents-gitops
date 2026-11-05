@@ -19,7 +19,9 @@ APP="${1:?usage: $0 <app>}"
 [[ "$APP" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || { echo "app must be a namespace name" >&2; exit 1; }
 
 key="$(openssl rand -hex 32)"
-hash="$(printf '%s' "$key" | sha256sum | cut -d' ' -f1)"
+# sha256sum on Linux; macOS before 15 only has shasum. Same output either way.
+if command -v sha256sum >/dev/null; then sha256() { sha256sum; }; else sha256() { shasum -a 256; }; fi
+hash="$(printf '%s' "$key" | sha256 | cut -d' ' -f1)"
 
 mkdir -p "$ROOT/apps/$APP" "$ROOT/platform/ai-gateway/apps/$APP"
 printf 'key=%s\n' "$key" |
