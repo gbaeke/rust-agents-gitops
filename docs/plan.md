@@ -183,13 +183,17 @@ Found while building 2.2:
 - **Finalizers:** the platform Applications have no resources-finalizer, so removing one from git can't delete CRDs and everything of their kinds.
 - **Gateway API:** v1.7.0 is out (2026-10-29), but this stays on v1.6.3, as in the script version.
 
-2.3 **The GatewayClass.** The controller chart has no GatewayClass and no Helm hooks: the controller creates `agentgateway` itself at runtime. So Argo doesn't track it and won't prune it. Confirm that it's there and Accepted.
+- **A project needs a destination namespace even for cluster-scoped apps.** `gateway-api-crds` first had none, and the project rejected the empty namespace (`InvalidSpecError`). It now targets `kube-system`, which CRDs ignore.
+- **A stuck wave doesn't fix itself from git.** The root's sync, pinned to the bad commit, kept waiting for the invalid child to turn Healthy. While it ran, auto-sync didn't pick up the fix. Terminating it got things going: `argocd app terminate-op root`, or set `status.operationState.phase: Terminating` on the Application. This is the cost of making the root wait for each wave's health.
+- **Waves work:** after the fix, `agentgateway-crds` was only created once wave -3 was Healthy, and `agentgateway` after it. It took about 40 s in total.
+
+2.3 **The GatewayClass.** The controller chart has no GatewayClass and no Helm hooks: the controller creates `agentgateway` itself at runtime. So Argo doesn't track it and won't prune it. Confirmed: it appears and is Accepted about 20 s after the controller starts.
 
 2.4 **`scripts/sealing-key.sh`:**
 - `backup` saves the Secret labelled `sealedsecrets.bitnami.com/sealed-secrets-key` from `kube-system` to `~/.config/rust-agents-gitops/sealing-key.yaml`, mode 600.
 - `restore` applies that file, and `bootstrap.sh` runs it first.
 
-Run `backup` once, right after the controller first starts.
+Run `backup` once, right after the controller first starts. Done 2026-11-05. The certificate's SHA-256 fingerprint is `EB:9E:BF:01:…:E8:03:23` (`scripts/sealing-key.sh cert | openssl x509 -noout -fingerprint -sha256`). After a rebuild it must be the same.
 
 2.5 **The central AI gateway** (D9), as an Application `ai-gateway` at wave 0 in project `platform`. Its order inside the Application:
 1. namespace;
