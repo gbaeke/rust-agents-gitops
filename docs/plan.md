@@ -100,8 +100,8 @@ rust-agents-gitops/
     apps.yaml               the ApplicationSet over apps/*
   platform/
     gateway-api/kustomization.yaml   remote standard-install.yaml at the pinned version
-    ai-gateway/             D9: namespace, Gateway, Parameters, models, policies, provider keys, its Postgres + db Job
-      apps/<app>.yaml       D10/D11: per app, its MCP backend + route and its key hash
+    ai-gateway/             D9: namespace, Gateway, Parameters, models, policies, provider keys, its Postgres
+      apps/<app>/           D10/D11: per app, key.yaml (its key hash) and mcp.yaml (its MCP backend + route)
   bases/
     rust-agent/             phase 5: the agent app as a kustomize base (phase 3 keeps it in apps/rust-agents)
   apps/
@@ -204,11 +204,16 @@ Run `backup` once, right after the controller first starts. Done 2026-11-05. The
 6. models, the API-key policy and the per-app files under `apps/` (empty until phase 3);
 7. NetworkPolicies.
 
-2.6 **The `agentgateway` database.** `db-init-job.yaml` in `platform/ai-gateway/` is an Argo `Sync` hook (`hook-delete-policy: BeforeHookCreation`) running `postgres:17` with `psql`:
-- `SELECT 1 FROM pg_database WHERE datname='agentgateway'`, then `CREATE DATABASE agentgateway` if it's missing. It's safe to run on every sync.
-- `PGPASSWORD` comes from the gateway's Secret `postgres`.
-- It must pass the restricted profile: runAsNonRoot uid 999, seccomp RuntimeDefault, drop ALL, no privilege escalation.
-- The gateway's Postgres NetworkPolicy must let it in.
+2.6 **The `agentgateway` database: no Job needed.** The gateway has a Postgres of its own, so the image creates the database on first start, with `POSTGRES_USER` and `POSTGRES_DB` both set to `agentgateway`. That replaces the planned Sync-hook Job and the `psql` exec from `deploy.sh`.
+
+Built as: `platform/ai-gateway/` synced as a directory with `recurse: true`, so a new `apps/<app>/` folder needs no list to be edited. Waves inside the Application:
+- -2: namespace;
+- -1: SealedSecrets;
+- 0: Postgres;
+- 1: Gateway and Parameters;
+- 2: models, the `api-keys` policy, key ConfigMaps and NetworkPolicies.
+
+Both `claude-sonnet-5-5` and `claude-haiku-5-5` are declared. Haiku keeps tests cheap, and phase 5's second agent will use it.
 
 2.7 **`scripts/seal.sh <path to .env>`** reads the Anthropic key from the `.env` line as `deploy.sh` did. It builds the Secret `anthropic` (`Authorization=<key>`) with `kubectl create secret generic --dry-run=client -o yaml --from-env-file=/dev/stdin` and pipes it into `kubeseal -o yaml`. It writes `platform/ai-gateway/sealed-anthropic.yaml`. Nothing unencrypted touches the disk or a process argument. The gateway's Postgres password is sealed the same way, generated **only if** the sealed file doesn't have it yet, because a new password would lock Postgres out of its existing data.
 

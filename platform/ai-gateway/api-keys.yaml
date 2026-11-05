@@ -1,0 +1,20 @@
+# Every call needs a valid app key (D11) in x-api-key, which is where
+# Anthropic clients such as rig send it. The keys are the ConfigMaps
+# labelled ai-gateway.platform/api-key, one per app in apps/<app>/key.yaml,
+# holding only a hash. Other policies can match on apiKey.app.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: api-keys
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: ai-gateway }
+  traffic:
+    apiKeyAuthentication:
+      mode: Strict
+      location:
+        header: { name: x-api-key }
+      configMapSelector:
+        matchLabels: { ai-gateway.platform/api-key: "true" }

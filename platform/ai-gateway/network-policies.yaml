@@ -1,0 +1,35 @@
+# Only client namespaces (label ai-gateway.platform/client: "true", set by
+# each app on its namespace) reach the proxy, and only the proxy reaches the
+# request-log database. The proxy itself may go anywhere: the model providers
+# and the apps' MCP servers.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  podSelector:
+    matchLabels: { gateway.networking.k8s.io/gateway-name: ai-gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { ai-gateway.platform/client: "true" }
+      ports: [{ port: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  podSelector:
+    matchLabels: { app: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { gateway.networking.k8s.io/gateway-name: ai-gateway }
+      ports: [{ port: 5432 }]

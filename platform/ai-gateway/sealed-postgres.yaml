@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: postgres
+  namespace: ai-gateway
+spec:
+  encryptedData:
+    password: AgCOxanMfEKT9APoaDLa9teisvWpSuYnBi1dQythy33jUH/ij1vVeCfHex44nN71Eup3yoYyZWXtRPNOUaWp4Voqq6h0ClE8ynB3C8wj7p5/pinD5yvYI53RbFJxjWpYLEi5JK4cecZ670gkXaACymzbLrrp3K3csvdSCThCovx0D3VShVwV9sgPblCZj6U4iTjSNQrRU9Caed1+hlSecqlm4AgM+5rDYtxJ+eDVOA/9XmH83d4nMlH+N9CRDBypRwswTqNm/n+CwVGeTmpDLWDYIUS17OnHZmOazPcpkTn+JWYN4zDPTb+oEsi38JN9qoEVt5Wq7cwJhTe43O4eAi368S6dIPvfuMowqVwpNpqWyYLXgdsaaztBl8Cv+eB0fdJiNDXP8/IpUDeb2p4IALeTGpY2C0R64WijB5qzvB5165/yslo1GQfopEJdHXJGNqpOp7oq3X/pBxW5vOjGbqIEkDuOknuVuWkacCInZpT0pFVxnT9Tajr1OHxb4czPue/hQl3ssK15pLa55luHTZnZ6U5T62oqI1Z9CxRu5+mJeu2vbFLRfQQ6hDcKBBgyIgjYEN0nVLWZM/pd7r+YAbcvYicAFf9kJVk0fv0+vm8CIyO8QfL1ICzG5WbKcHsWw3+Fk/St7p5+X0TmsMWPprHx/B54lY5YMP5m/1UPiQTb2TyeHhqhQ1ja4uCa9QC/O/yeHma8NnZuebhsXVSL9qA1rVVUYEx3cNx3xW1qaQ5kbVeRhRksHAUwOFrU8uidLGg=
+  template:
+    metadata:
+      name: postgres
+      namespace: ai-gateway

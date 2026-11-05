@@ -1,0 +1,57 @@
+# The one Gateway every agent uses. Models (models.yaml) and, from phase 3,
+# each app's MCP route (apps/<app>/) attach to its listener; only objects in
+# this namespace can (from: Same), so apps can't add their own. Agents call
+# http://ai-gateway.ai-gateway.svc.cluster.local:8080 with their own key
+# (api-keys.yaml); the gateway swaps it for the provider key.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ai-gateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  gatewayClassName: agentgateway
+  infrastructure:
+    parametersRef: { group: agentgateway.dev, kind: AgentgatewayParameters, name: ai-gateway }
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces: { from: Same }
+        # A listener only takes the standard route kinds unless told otherwise.
+        kinds:
+          - { group: gateway.networking.k8s.io, kind: HTTPRoute }
+          - { group: agentgateway.dev, kind: AgentgatewayModel }
+---
+# How the controller runs this Gateway's proxy: two replicas (every agent
+# depends on it), only reachable inside the cluster, and with the seccomp
+# profile the restricted namespace requires.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: ai-gateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  deployment:
+    spec:
+      replicas: 2
+      template:
+        spec:
+          securityContext:
+            seccompProfile: { type: RuntimeDefault }
+  service:
+    spec:
+      type: ClusterIP
+  # Request logs in Postgres (postgres.yaml) feed the admin UI's LLM >
+  # Analytics page (/ui/llm/analytics) with every LLM call from both replicas
+  # and all agents. There is no typed field for it, so it goes in as raw
+  # config.
+  env:
+    - name: POSTGRES_PASSWORD
+      valueFrom: { secretKeyRef: { name: postgres, key: password } }
+  rawConfig:
+    config:
+      database:
+        url: postgres://agentgateway:${POSTGRES_PASSWORD}@postgres:5432/agentgateway

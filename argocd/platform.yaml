@@ -101,3 +101,28 @@ spec:
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [CreateNamespace=true]
+---
+# Wave 0: the central AI gateway (D9), after the controller and Sealed
+# Secrets. Everything in platform/ai-gateway/, subfolders included (one per
+# app). The namespace comes from git with its security labels, so no
+# CreateNamespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/gbaeke/rust-agents-gitops.git
+    targetRevision: main
+    path: platform/ai-gateway
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-gateway
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

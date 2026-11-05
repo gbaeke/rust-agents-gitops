@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: anthropic
+  namespace: ai-gateway
+spec:
+  encryptedData:
+    Authorization: AgBGp1kOx118j2KAWmQ2THWsxy43ECQUIBdKNCJq64aMCvVvn9EQp8CYSbg82P8EwfL1FC9fUhWzXxzvkWqF2lGKkUWdIIe3AQZqsLqyIuldcC8Q7ucFSetQlJ98JQK7WRjoBIKOysYTb7PeTDDOCU4DDnUkwEks9/2ZNe5JFaHS2CBoMcAU0Mhw26pyxZ8B0Xd4aDR9ugF1x2PLG/J5hf63gtxOwW333gXe18MzfJqu4BcJiDa8hGoVlMtg/KiWh3EQjWO/fgh5quOTAnRQL9mFHC2FLjeHiNlVQvY2aw6DIRD5OcF6pzsONkuXtgVHo7fGd955xn/ux3jcXnRqVbw7YhJXonksfK1u4WOJmfFbpeRGZECRzyFkUy7QskidVVmkobkuWBdWW2cFzHiFpm0sPpuSkkMtnUN9ngTNIOUV4l1wDpBov/AD0/ksJt3DbobVajfwNqCmK3Zd/mMTH43J/LpZpiT/P1xIkMx2zlTPV4GC7pbJDjznyd2YiOKxIeCL5a7e5jkKvhPFl1c6bAu2pA+AeCO/U/55TvGRsdrdBTc7tN95fVhwhC3bxGzv3EKKkF6ti5zx7sBv+jCyHfzwsYmv7Ae5oG14BQAVHklMyPQLwusAMED8TUBybIjzqPZtNiBzybzyu4zUR3XphT+MSFefH0WK/5xT0SVAOBkjmYZNh/3hb0NYBz8mtmAdpxfbvPjX0M7zYTHcRod35R9Xx+9ZLN9qO/ftMHfF1PpeLx6WXaXNJbw61IQ7PdvkS90PnnWwd09tURmKXBhlR21UVaNpURauMQ6KJxFxHRTdUkULmnd8oOoYYx1FGc4fhWXm57laI97j4tOh
+  template:
+    metadata:
+      name: anthropic
+      namespace: ai-gateway

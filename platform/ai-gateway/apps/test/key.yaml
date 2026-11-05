@@ -1,0 +1,12 @@
+# test's gateway key, as a hash only (written by scripts/agent-key.sh; the key
+# itself is sealed in apps/test/). Picked up by the policy in api-keys.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-key-test
+  labels:
+    ai-gateway.platform/api-key: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+data:
+  test: '{"keyHash": "sha256:aed281fad7186348ad6a98a51d8b29577a46144e6a54ae82c40a9cb03bf134af", "metadata": {"app": "test"}}'

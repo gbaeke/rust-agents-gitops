@@ -1,0 +1,14 @@
+# The central AI gateway (D9): one agentgateway proxy shared by every agent.
+# The platform owns everything here: models, provider keys, policies, each
+# app's MCP route and key hash (apps/<app>/), and the request-log database.
+# Apps only run workloads and reach this gateway over the network.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway
+  labels:
+    # The cluster refuses pods that run as root, escalate privileges, etc.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"

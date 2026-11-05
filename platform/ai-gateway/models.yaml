@@ -1,0 +1,34 @@
+# The model catalogue: the gateway serves only the models declared here, on
+# its standard paths, including Anthropic's own /v1/messages in Anthropic's
+# format. A request for any other model is refused. The Anthropic key comes
+# from the Secret anthropic (scripts/seal.sh anthropic) and replaces the
+# client's key. Which agent may use which model is a policy on top of this.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: claude-sonnet-5-5
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  parentRefs:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: ai-gateway, sectionName: http }
+  provider: Anthropic
+  policies:
+    auth:
+      secretRef:
+        name: anthropic
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: claude-haiku-5-5
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  parentRefs:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: ai-gateway, sectionName: http }
+  provider: Anthropic
+  policies:
+    auth:
+      secretRef:
+        name: anthropic
