@@ -1,0 +1,17 @@
+# Test (phase 5.4): an app trying to change the platform. Both must be refused
+# by the AppProject apps, and this file removed again.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: claude-opus-5-5
+spec:
+  parentRefs:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: ai-gateway, namespace: ai-gateway, sectionName: http }
+  provider: Anthropic
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: research-agent-everything
+rules:
+  - { apiGroups: ["*"], resources: ["*"], verbs: ["*"] }
