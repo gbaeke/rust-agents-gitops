@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 3 built and tested; the rebuild test of checkpoint 3 is still to do** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 3 done, at checkpoint 3** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -338,6 +338,13 @@ Checkpoint 3 results (Sonnet; 6 calls, $0.038 in total):
 | 14 | Request log | the successful calls and the 404 are `agentgateway_user = rust-agents`, with tokens and cost |
 
 Then run `cluster.sh down`, `up` and `bootstrap.sh`, and check that the whole app comes back from git with no other step. Postgres data is lost then, since the PVC goes with the cluster. That's expected.
+
+Rebuild test, 2026-11-05: **passed.**
+- **Timing:** about 2.5 minutes from `cluster.sh down` until all seven Applications were Synced and Healthy, with no manual step.
+- **Agents:** all three connected to MCP with 4 tools, and a chat through the NodePort used `calculate` (2^20 = 1048576).
+- **Sealing key:** the fingerprint is unchanged.
+
+Worth knowing from that run: `rust-agents` was already created while `ai-gateway` was still **OutOfSync** but Healthy. The Application health check passes on health alone, not on sync status, so a wave can start before the previous one has finished applying a new commit. That's the same cause as the missing-route problem above. **Phase 4 candidate:** make the Lua check return Progressing while `status.sync.status` isn't `Synced`. The risk: an app that stays OutOfSync for good (a field that always differs) would block every later wave.
 
 ---
 
