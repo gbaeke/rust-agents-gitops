@@ -1,0 +1,7 @@
+# The Gateway API CRDs (standard channel), at the version rust-agents' script
+# setup uses. Argo applies them server-side: they are too large for the
+# last-applied annotation of a client-side apply.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml

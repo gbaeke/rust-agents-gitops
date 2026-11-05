@@ -177,7 +177,13 @@ Subcommands: `password`, `status`, `uninstall`.
 | -2 | `agentgateway-crds` | OCI Helm `cr.agentgateway.dev/charts/agentgateway-crds` v1.7.0 | `ServerSideApply=true`. In Argo the OCI repo is written without `oci://` and with `enableOCI`. Check the current syntax. |
 | -1 | `agentgateway` | OCI Helm `cr.agentgateway.dev/charts/agentgateway` v1.7.0 | Namespace `agentgateway-system`, `CreateNamespace=true`. Same values as `kind/agentgateway.sh` (none so far). |
 
-2.3 **The GatewayClass.** Check that the controller chart creates `agentgateway` as it does now, and that Argo doesn't show it as OutOfSync or prune it. It's created by the chart, so it's tracked.
+Found while building 2.2:
+- **Sealed Secrets:** the chart moved to `https://bitnami.github.io/sealed-secrets` (the bitnami-labs URL gives a 404). It's pinned at 2.22.0 (controller 0.41.2), with `keyrenewperiod: "0"` so there's only ever one key to back up.
+- **OCI:** Argo v3.6 takes OCI as a native source (`repoURL: oci://cr.agentgateway.dev/charts/<chart>`, `path: .`, `targetRevision: v1.7.0`), so `enableOCI` isn't needed.
+- **Finalizers:** the platform Applications have no resources-finalizer, so removing one from git can't delete CRDs and everything of their kinds.
+- **Gateway API:** v1.7.0 is out (2026-10-29), but this stays on v1.6.3, as in the script version.
+
+2.3 **The GatewayClass.** The controller chart has no GatewayClass and no Helm hooks: the controller creates `agentgateway` itself at runtime. So Argo doesn't track it and won't prune it. Confirm that it's there and Accepted.
 
 2.4 **`scripts/sealing-key.sh`:**
 - `backup` saves the Secret labelled `sealedsecrets.bitnami.com/sealed-secrets-key` from `kube-system` to `~/.config/rust-agents-gitops/sealing-key.yaml`, mode 600.

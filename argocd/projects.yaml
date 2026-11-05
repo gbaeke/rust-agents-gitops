@@ -1,0 +1,30 @@
+# Who may deploy what. Before the Applications that use them (sync wave -10).
+#
+# platform: the shared pieces every app relies on (CRDs, controllers, the
+# central AI gateway). It may create cluster-wide resources, so apps never
+# get this project.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Shared platform pieces; cluster-wide resources allowed
+  sourceRepos:
+    - https://github.com/gbaeke/rust-agents-gitops.git
+    - https://bitnami.github.io/sealed-secrets
+    - oci://cr.agentgateway.dev/charts/*
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: agentgateway-system
+    - server: https://kubernetes.default.svc
+      namespace: ai-gateway
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
