@@ -50,6 +50,9 @@ spec:
     path: platform/gateway-api
   destination:
     server: https://kubernetes.default.svc
+    # Only cluster-scoped CRDs, so the namespace is unused, but the platform
+    # project only allows destinations with one of its namespaces.
+    namespace: kube-system
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [ServerSideApply=true]
