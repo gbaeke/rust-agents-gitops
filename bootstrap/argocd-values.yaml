@@ -11,7 +11,10 @@ configs:
     # parent (the root) doesn't wait for its children and sync waves on
     # Applications order nothing. This makes a child Application report its
     # own health, so wave n+1 waits until wave n is Healthy. From the Argo CD
-    # docs (operator-manual/health.md).
+    # docs (operator-manual/health.md), made stricter: a child that is Healthy
+    # but not yet Synced to the latest commit counts as Progressing, so a
+    # later wave can't start before an earlier one has applied that commit.
+    # The cost: a child that stays OutOfSync for good blocks every later wave.
     resource.customizations.health.argoproj.io_Application: |
       hs = {}
       hs.status = "Progressing"
@@ -22,6 +25,10 @@ configs:
           if obj.status.health.message ~= nil then
             hs.message = obj.status.health.message
           end
+        end
+        if hs.status == "Healthy" and (obj.status.sync == nil or obj.status.sync.status ~= "Synced") then
+          hs.status = "Progressing"
+          hs.message = "Healthy, waiting to sync"
         end
       end
       return hs
