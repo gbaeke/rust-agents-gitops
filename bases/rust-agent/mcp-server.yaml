@@ -1,6 +1,6 @@
 # Stateless (no MCP sessions), so it runs as several replicas from the start.
-# Reached only through the central AI gateway, on /rust-agents/mcp (see
-# platform/ai-gateway/apps/rust-agents/mcp.yaml).
+# Reached only through the central AI gateway, on /<app>/mcp (see
+# platform/ai-gateway/apps/<app>/mcp.yaml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,9 +27,11 @@ spec:
           env:
             - name: MCP_ADDR
               value: 0.0.0.0:8081
-            # Host names callers may use (DNS-rebinding protection).
+            # Host names callers may use (DNS-rebinding protection). The full
+            # names contain the namespace, so each overlay sets its own list, as
+            # env/1: keep this entry second.
             - name: MCP_ALLOWED_HOSTS
-              value: mcp-server,mcp-server:8081,mcp-server.rust-agents,mcp-server.rust-agents:8081,mcp-server.rust-agents.svc.cluster.local,mcp-server.rust-agents.svc.cluster.local:8081
+              value: mcp-server,mcp-server:8081
           ports:
             - { name: http, containerPort: 8081 }
           readinessProbe:

@@ -1,41 +1,26 @@
+# The first agent: bases/rust-agent as is, in namespace rust-agents, on
+# NodePort 30000 (http://<host>:31000).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: rust-agents
 resources:
-  - namespace.yaml
+  - ../../bases/rust-agent
   - sealed-postgres.yaml
   - sealed-gateway-key.yaml
-  - postgres.yaml
-  - mcp-server.yaml
-  - agent.yaml
-  - disruption-budgets.yaml
-  - network-policies.yaml
 configMapGenerator:
   - name: agent-config
-    options:
-      annotations:
-        argocd.argoproj.io/sync-wave: "-1"
+    behavior: merge
     literals:
-      # Must be a model the central gateway serves (platform/ai-gateway/models.yaml).
-      - AGENT_MODEL=claude-sonnet-5-5
-      - AGENT_ADDR=0.0.0.0:3000
-      # Model and tool traffic both go through the central AI gateway, with
-      # this app's key (Secret gateway-key, see agent.yaml).
-      - ANTHROPIC_BASE_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080
       - MCP_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080/rust-agents/mcp
-      - KB_DIR=/knowledge-base
-      - SESSION_TTL_DAYS=14
-# Set by scripts/release.sh: the short hash of the last commit that changed
-# the source (never reused, so a new tag always rolls out).
-images:
-  - name: localhost:5001/rust-agents/agent
-    newTag: e0ef63a
-  - name: localhost:5001/rust-agents/mcp-server
-    newTag: e0ef63a
-# Secrets and config come first in a sync (wave -1); the other files set their
-# own wave: Postgres 0, the rest 1. The sealed files are written by scripts,
-# so their wave is patched in here.
 patches:
+  # Written by scripts, so their wave is patched in: secrets come first.
   - target: {kind: SealedSecret}
     patch: |-
       - { op: add, path: /metadata/annotations, value: { argocd.argoproj.io/sync-wave: "-1" } }
+  # The MCP server's allowed host names (DNS-rebinding protection), with this
+  # namespace in them. env/1 is MCP_ALLOWED_HOSTS in bases/rust-agent/mcp-server.yaml.
+  - target: {kind: Deployment, name: mcp-server}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: mcp-server,mcp-server:8081,mcp-server.rust-agents,mcp-server.rust-agents:8081,mcp-server.rust-agents.svc.cluster.local,mcp-server.rust-agents.svc.cluster.local:8081

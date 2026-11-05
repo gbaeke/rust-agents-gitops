@@ -1,0 +1,36 @@
+# The rust agent as a template: each folder under apps/ is one agent made from
+# it (an overlay), with its own namespace, secrets and settings. What is the
+# same for every agent lives here, including the image tags: one release
+# updates every agent.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - mcp-server.yaml
+  - agent.yaml
+  - disruption-budgets.yaml
+  - network-policies.yaml
+configMapGenerator:
+  - name: agent-config
+    options:
+      annotations:
+        argocd.argoproj.io/sync-wave: "-1"
+    literals:
+      # Must be a model the central gateway serves (platform/ai-gateway/models.yaml)
+      # and allows for this app. An overlay may change it.
+      - AGENT_MODEL=claude-sonnet-5-5
+      - AGENT_ADDR=0.0.0.0:3000
+      # Model and tool traffic both go through the central AI gateway, with
+      # the app's key (Secret gateway-key, see agent.yaml). Each overlay sets
+      # MCP_URL to its own route, .../<app>/mcp.
+      - ANTHROPIC_BASE_URL=http://ai-gateway.ai-gateway.svc.cluster.local:8080
+      - KB_DIR=/knowledge-base
+      - SESSION_TTL_DAYS=14
+# Set by scripts/release.sh: the short hash of the last commit that changed
+# the source (never reused, so a new tag always rolls out).
+images:
+  - name: localhost:5001/rust-agents/agent
+    newTag: e0ef63a
+  - name: localhost:5001/rust-agents/mcp-server
+    newTag: e0ef63a

@@ -75,7 +75,7 @@ Apps can't add models, routes or policies: their AppProject blocks every Gateway
 | Task | How | What happens |
 |---|---|---|
 | Release new code | Commit the code, run `scripts/release.sh`, push | It builds and pushes both images, tagged with the source's last commit hash, and commits the tag. After the push the pods roll. |
-| Change a setting | Edit `apps/rust-agents/kustomization.yaml`, commit, push | The ConfigMap gets a new name (a hash of its contents), so the pods roll and the old one is pruned |
+| Change a setting | Edit `bases/rust-agent/kustomization.yaml` (every agent) or `apps/<app>/kustomization.yaml` (one agent), commit, push | The ConfigMap gets a new name (a hash of its contents), so the pods roll and the old one is pruned |
 | Roll back | `git revert <release commit>`, push | The old images come back; Argo's own Rollback button is off while auto-sync is on |
 | Fix drift | Nothing | A `kubectl scale` or a deleted NetworkPolicy is undone within seconds (selfHeal) |
 | Refresh now | `kubectl -n argocd annotate application <app> argocd.argoproj.io/refresh=hard --overwrite`, or **Refresh** in the UI | Saves waiting for the 3-minute poll. Refresh the app you changed, not only `root`. |
@@ -127,7 +127,8 @@ cluster/        kind config and cluster.sh (cluster + local registry)
 bootstrap/      bootstrap.sh, Argo CD's Helm values, root.yaml
 argocd/         what root syncs: AppProjects, the platform Applications, the rust-agents Application
 platform/       gateway-api/ (CRDs), ai-gateway/ (the central gateway)
-apps/           rust-agents/ (kustomize; the tags are set by release.sh)
+bases/          rust-agent/: the agent as a kustomize template (the image tags are set here by release.sh)
+apps/           one folder per agent, each an overlay of bases/rust-agent
 scripts/        release.sh, seal.sh, agent-key.sh, sealing-key.sh
 agent/, mcp-server/, knowledge-base/, Dockerfile   the app's source
 ```
