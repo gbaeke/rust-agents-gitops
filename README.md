@@ -4,23 +4,44 @@ A Rust "deep agent" on Claude, with an MCP tool server and Postgres, running on 
 
 How it was built, phase by phase, is in [docs/plan.md](docs/plan.md).
 
+**How it gets deployed:**
+
 ```
-                        git (this repo, main)
-                                │  Argo CD syncs every ~3 min, or on refresh
-                                ▼
- kind cluster "gitops" ─────────────────────────────────────────────────────────────
-  argocd            root ─▶ platform Applications (sync waves) ─▶ rust-agents
-  kube-system       Sealed Secrets (decrypts the secrets in git)
-  agentgateway-system   the agentgateway controller
-  ai-gateway        the central gateway: models, Anthropic key, per-app keys,
-                    policies, every app's MCP route, request-log Postgres
-  rust-agents       agent ×3 ──x-api-key──▶ ai-gateway ──▶ api.anthropic.com   (Sonnet, Haiku)
-                    mcp-server ×2 ◀──────── ai-gateway (/rust-agents/mcp)
-                    Postgres (chats)
-  research-agent    the same, from the same template, on Haiku only   (:31001)
- ───────────────────────────────────────────────────────────────────────────────────
- kind-registry (localhost:5001): the images, built by scripts/release.sh
+ git: this repo, branch main
+   │  Argo CD polls it at most every 3 minutes (or press Refresh)
+   ▼
+ Argo CD (namespace argocd): the root Application syncs argocd/, wave by wave
+
+   wave  what                                       namespace
+   -10   AppProjects: platform, apps                argocd
+    -3   Sealed Secrets                             kube-system
+    -3   Gateway API CRDs                           (cluster-wide)
+    -2   agentgateway CRDs                          (cluster-wide)
+    -1   agentgateway controller                    agentgateway-system
+     0   the central AI gateway                     ai-gateway
+     1   ApplicationSet: one app per apps/ folder
+           rust-agents                              rust-agents
+           research-agent                           research-agent
 ```
+
+**How a call flows** (each box is a namespace):
+
+```
+ rust-agents :31000                ai-gateway
+ ┌─────────────────────┐           ┌──────────────────────┐
+ │ agent ×3            ├───┐       │ central gateway ×2   │
+ │ mcp-server ×2       │   │       │                      │
+ │ Postgres (chats)    │   ├──────▶│ Anthropic key        ├──▶ api.anthropic.com
+ └─────────────────────┘   │       │ models per app       │
+                           │       │ a key per app        │
+ research-agent :31001     │       │ limits               │
+ ┌─────────────────────┐   │       │ an MCP route per app │
+ │ the same template,  ├───┘       │ request log          │
+ │ on Haiku only       │           └──────────────────────┘
+ └─────────────────────┘
+```
+
+Model calls and tool calls both carry the app's key in `x-api-key`. The gateway sends an app's tool calls on to that app's own mcp-server, at `/<app>/mcp`. Images come from a local registry container, `kind-registry` on `localhost:5001`, filled by `scripts/release.sh`.
 
 ## Quick start
 
