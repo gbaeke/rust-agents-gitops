@@ -1,0 +1,10 @@
+target/
+.env
+.git/
+docs/
+cluster/
+bootstrap/
+argocd/
+platform/
+apps/
+scripts/
