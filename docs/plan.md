@@ -1,6 +1,6 @@
 # Plan: a GitOps version of the Kubernetes setup, in a new repo
 
-Status: **phase 3 done, at checkpoint 3** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
+Status: **phase 4 done, at checkpoint 4** (2026-11-05). D1–D12 confirmed. This plan is written so it can be picked up from scratch in a later session.
 
 In this plan, "this repo" or "here" means the script-based original at `/home/geba/Projects/rust-agents` (github.com/gbaeke/rust-agents). Copy what is needed from it; nothing may depend on it afterwards. "The new repo" is this folder, `/home/geba/Projects/rust-agents-gitops`.
 
@@ -365,6 +365,22 @@ Worth knowing from that run: `rust-agents` was already created while `ai-gateway
 4.6 **Optional:** Argo manages itself. An Application `argocd` for the same chart and values in project `platform`. Only do this if the user wants it (D8).
 
 **Checkpoint 4:** write in the README a short comparison with the script version: what each step costs, what git now records, and what still needs a script (the cluster, the bootstrap, sealing, images).
+
+Done 2026-11-05. Results:
+
+| Step | What was done | Result |
+|---|---|---|
+| 4.1 Release | `e0ef63a`: the agent keeps retrying MCP in the background (fixes the race from phase 3), via `release.sh` and a push | The agent pods rolled; Postgres and the gateway were untouched. **The MCP server pods rolled too:** both images get the same tag (D3), so the unchanged one gets a new tag. Harmless. A per-image tag (`git log -1 -- mcp-server Cargo.lock Dockerfile` for the MCP image) would fix it; not done. |
+| 4.2 Setting | `SESSION_TTL_DAYS` 7 → 14 | The ConfigMap went from `agent-config-4htmdtbd59` to `agent-config-t892k6fk8m` and the old one was pruned. The agent pods rolled; nothing else did. |
+| 4.3 Drift | `kubectl scale deploy/agent --replicas=1` and `kubectl delete networkpolicy agent-egress` | Back to 3 replicas within 2 s, and the NetworkPolicy back within 6 s |
+| 4.4 Rollback | `git revert` of the release (`2721426`), then a revert of that (`96efe25`) | The images went to `3ea8767` and back to `e0ef63a`; the 14-day setting stayed |
+| 4.5 Inner loop | Pause auto-sync on `rust-agents`, `kubectl set image` | **Pausing only the app doesn't hold:** root restored its auto-sync within 3 s, because the Application is itself synced from git. Pausing `root` first, then the app, works. The app shows OutOfSync and is left alone. Turning root's auto-sync back on puts everything back within about 12 s. Written up in the README. |
+| 4.6 Argo manages itself | Not done (optional, D8) | Argo CD's own settings still change with `bootstrap.sh`, an idempotent `helm upgrade`. That's how the stricter health check below was applied. |
+
+Also in phase 4:
+- **The stricter Application health check:** a child that's Healthy but not Synced counts as Progressing, so a later wave waits until an earlier one has applied the latest commit. While the inner-loop pause was on, it made `root` show Progressing, which is correct and makes the pause visible.
+- **Rig and MCP:** rig lists an MCP server's tools when it connects; tool calls happen when the model picks a tool. `McpClientHandler` can refresh the list on `notifications/tools/list_changed`, but our stateless MCP route never sends that. Per-turn tool listing (as the OpenAI Agents SDK does by default) is a possible later step.
+- **The README** now has the quick start, how to use the agent, the central gateway, day-to-day work, secrets and the comparison with the script version.
 
 ---
 
