@@ -1,0 +1,34 @@
+# One Application per folder under apps/ (D12), after the platform (wave 1):
+# the folder's name is the app's name and its namespace. Adding a folder and
+# pushing is all it takes to add an agent; its gateway side goes in
+# platform/ai-gateway/apps/<app>/ (scripts/agent-key.sh starts both).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/gbaeke/rust-agents-gitops.git
+        revision: main
+        directories:
+          - path: apps/*
+  template:
+    metadata:
+      name: "{{ .path.basename }}"
+    spec:
+      project: apps
+      source:
+        repoURL: https://github.com/gbaeke/rust-agents-gitops.git
+        targetRevision: main
+        path: "{{ .path.path }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .path.basename }}"
+      syncPolicy:
+        automated: { prune: true, selfHeal: true }
